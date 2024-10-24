@@ -28,7 +28,6 @@ public class ImageDownloadRestController {
             @RequestParam String url,
             @RequestParam String savePath,
             @RequestParam(defaultValue = "ALL") ImageFormat format) {
-
         DownloadResult result = downloadService.downloadImages(url, savePath, Collections.singletonList(format));
         return ResponseEntity.ok(result);
     }
@@ -39,19 +38,14 @@ public class ImageDownloadRestController {
             @RequestParam String savePath,
             @RequestParam(defaultValue = "ALL") ImageFormat format) {
         DownloadTask task = downloadService.createDownloadTask(url, savePath);
-        task.setFormat(format);  // Предполагается, что вы добавите поле format в DownloadTask
+        task.setFormat(format);
         return ResponseEntity.ok(task);
     }
-
 
     @GetMapping("/download/task/{taskId}")
     public ResponseEntity<DownloadTask> getDownloadTask(@PathVariable String taskId) {
         DownloadTask task = downloadService.getDownloadTask(taskId);
-        if (task != null) {
-            return ResponseEntity.ok(task);
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        return ResponseEntity.ok(task);
     }
 
     @PostMapping("/download/task/{taskId}/start")

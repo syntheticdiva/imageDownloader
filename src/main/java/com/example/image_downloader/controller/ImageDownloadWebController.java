@@ -41,31 +41,44 @@ public class ImageDownloadWebController {
 
         log.debug("Received formats from form: {}", formats);
 
-        List<ImageFormat> selectedFormats;
-        if (formats != null && formats.contains("ALL")) {
-            selectedFormats = Collections.singletonList(ImageFormat.ALL);
-        } else if (formats != null && !formats.isEmpty()) {
-            selectedFormats = formats.stream()
-                    .map(ImageFormat::valueOf)
-                    .collect(Collectors.toList());
-        } else {
-            // Если ничего не выбрано, используем все форматы по умолчанию
-            selectedFormats = Collections.singletonList(ImageFormat.ALL);
+        // Проверка на корректность URL
+        if (!isValidUrl(url)) {
+            throw new IllegalArgumentException("Неверный URL: " + url);
         }
+
+        List<ImageFormat> selectedFormats = getSelectedFormats(formats);
 
         log.info("Processing download request for formats: {}", selectedFormats);
 
         DownloadResult result = downloadService.downloadImages(url, savePath, selectedFormats);
-        model.addAttribute("result", result);
 
+        addAttributesToModel(model, result, url, savePath, formats);
 
+        return "download";
+    }
 
+    private boolean isValidUrl(String url) {
+        // Простая проверка на наличие протокола (http/https)
+        return url.startsWith("http://") || url.startsWith("https://");
+    }
+
+    private List<ImageFormat> getSelectedFormats(List<String> formats) {
+        if (formats != null && formats.contains("ALL")) {
+            return Collections.singletonList(ImageFormat.ALL);
+        } else if (formats != null && !formats.isEmpty()) {
+            return formats.stream()
+                    .map(ImageFormat::valueOf)
+                    .collect(Collectors.toList());
+        } else {
+            return Collections.singletonList(ImageFormat.ALL);
+        }
+    }
+
+    private void addAttributesToModel(Model model, DownloadResult result, String url, String savePath, List<String> formats) {
         model.addAttribute("result", result);
         model.addAttribute("url", url);
         model.addAttribute("savePath", savePath);
         model.addAttribute("selectedFormats", formats);
         model.addAttribute("formats", ImageFormat.values());
-
-        return "download";
     }
 }
