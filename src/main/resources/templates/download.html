@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Загрузка изображений</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #ff0000;
+            margin: 10px 0;
+        }
+        .success {
+            color: #4CAF50;
+            margin: 10px 0;
+        }
+        .warning {
+            color: #ff9800;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<h1>Загрузка изображений с веб-страницы</h1>
+
+<form th:action="@{/download}" method="post">
+    <div class="form-group">
+        <label for="url">URL страницы:</label>
+        <input type="text" id="url" name="url" th:value="${url}"
+               placeholder="https://example.com" required>
+    </div>
+
+    <div class="form-group">
+        <label for="savePath">Путь для сохранения:</label>
+        <input type="text" id="savePath" name="savePath" th:value="${savePath}"
+               placeholder="C:\Downloads\Images" required>
+        <button type="button" onclick="selectFolder()">Выбрать папку</button>
+    </div>
+
+    <button type="submit">Скачать изображения</button>
+</form>
+
+<div class="form-group">
+    <label>Выберите форматы для скачивания:</label>
+    <div class="checkbox-group">
+        <input type="checkbox" id="formatAll" name="formats" value="ALL" checked>
+        <label for="formatAll">Все форматы</label>
+
+        <input type="checkbox" id="formatJpg" name="formats" value="JPG">
+        <label for="formatJpg">JPG</label>
+
+        <input type="checkbox" id="formatPng" name="formats" value="PNG">
+        <label for="formatPng">PNG</label>
+
+        <input type="checkbox" id="formatGif" name="formats" value="GIF">
+        <label for="formatGif">GIF</label>
+
+        <input type="checkbox" id="formatBmp" name="formats" value="BMP">
+        <label for="formatBmp">BMP</label>
+    </div>
+</div>
+
+<!-- Отображение результата -->
+<div th:if="${result != null}">
+    <div th:if="${result.success}" class="success">
+        <h3 th:text="${result.message}"></h3>
+    </div>
+
+    <div th:if="${!result.success}" class="error">
+        <h3 th:text="${result.message}"></h3>
+    </div>
+
+    <div th:if="${!result.errors.empty}" class="warning">
+        <h4>Предупреждения:</h4>
+        <ul>
+            <li th:each="error : ${result.errors}" th:text="${error}"></li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    function selectFolder() {
+        // Для работы с файловой системой в веб-приложении есть ограничения
+        // В реальном приложении можно использовать элемент <input type="file" webkitdirectory>
+        // Или настроить взаимодействие с нативным файловым диалогом через electron/javafx
+        alert("В веб-версии выбор папки ограничен. Пожалуйста, введите путь вручную.");
+    }
+</script>
+</body>
+</html>
