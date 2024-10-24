@@ -24,4 +24,8 @@ public enum ImageFormat {
                 throw new IllegalArgumentException("Unsupported image format: " + format);
         }
     }
+
+    public static boolean isValidExtension(String extension, ImageFormat format) {
+        return format == ALL || getExtensions(format).contains(extension.toLowerCase());
+    }
 }

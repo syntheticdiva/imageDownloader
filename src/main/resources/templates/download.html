@@ -47,6 +47,20 @@
             color: #ff9800;
             margin: 10px 0;
         }
+        .result-container {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.result-container h2 {
+    margin-top: 0;
+}
+
+.result-container ul {
+    padding-left: 20px;
+}
     </style>
 </head>
 <body>
@@ -63,57 +77,60 @@
         <label for="savePath">Путь для сохранения:</label>
         <input type="text" id="savePath" name="savePath" th:value="${savePath}"
                placeholder="C:\Downloads\Images" required>
-        <button type="button" onclick="selectFolder()">Выбрать папку</button>
+    </div>
+
+    <div class="form-group">
+        <label>Выберите форматы для скачивания:</label>
+        <div class="checkbox-group">
+            <div>
+                <input type="checkbox" id="formatALL" name="formats" value="ALL">
+                <label for="formatALL">Все форматы</label>
+            </div>
+            <div th:each="format : ${T(com.example.image_downloader.enums.ImageFormat).values()}"
+                 th:if="${format != T(com.example.image_downloader.enums.ImageFormat).ALL}">
+                <input type="checkbox" th:id="${'format' + format}" name="formats" th:value="${format}">
+                <label th:for="${'format' + format}" th:text="${format}"></label>
+            </div>
+        </div>
     </div>
 
     <button type="submit">Скачать изображения</button>
+
+    <div th:if="${result != null}" class="result-container">
+        <h2>Результаты загрузки</h2>
+        <div th:class="${result.success ? 'success' : 'error'}">
+            <p th:text="${result.message}"></p>
+        </div>
+
+        <div th:if="${result.downloadedCount > 0}" class="success">
+            <p>Количество загруженных изображений: <span th:text="${result.downloadedCount}"></span></p>
+        </div>
+
+        <div th:if="${!result.errors.empty}" class="error">
+            <h3>Ошибки:</h3>
+            <ul>
+                <li th:each="error : ${result.errors}" th:text="${error}"></li>
+            </ul>
+        </div>
+    </div>
 </form>
-
-<div class="form-group">
-    <label>Выберите форматы для скачивания:</label>
-    <div class="checkbox-group">
-        <input type="checkbox" id="formatAll" name="formats" value="ALL" checked>
-        <label for="formatAll">Все форматы</label>
-
-        <input type="checkbox" id="formatJpg" name="formats" value="JPG">
-        <label for="formatJpg">JPG</label>
-
-        <input type="checkbox" id="formatPng" name="formats" value="PNG">
-        <label for="formatPng">PNG</label>
-
-        <input type="checkbox" id="formatGif" name="formats" value="GIF">
-        <label for="formatGif">GIF</label>
-
-        <input type="checkbox" id="formatBmp" name="formats" value="BMP">
-        <label for="formatBmp">BMP</label>
-    </div>
-</div>
-
-<!-- Отображение результата -->
-<div th:if="${result != null}">
-    <div th:if="${result.success}" class="success">
-        <h3 th:text="${result.message}"></h3>
-    </div>
-
-    <div th:if="${!result.success}" class="error">
-        <h3 th:text="${result.message}"></h3>
-    </div>
-
-    <div th:if="${!result.errors.empty}" class="warning">
-        <h4>Предупреждения:</h4>
-        <ul>
-            <li th:each="error : ${result.errors}" th:text="${error}"></li>
-        </ul>
-    </div>
-</div>
+<!-- ... (остальной код body остается без изменений) ... -->
 
 <script>
     function selectFolder() {
-        // Для работы с файловой системой в веб-приложении есть ограничения
-        // В реальном приложении можно использовать элемент <input type="file" webkitdirectory>
-        // Или настроить взаимодействие с нативным файловым диалогом через electron/javafx
         alert("В веб-версии выбор папки ограничен. Пожалуйста, введите путь вручную.");
     }
+
+    // Добавим JavaScript для обработки выбора "Все форматы"
+    document.getElementById('formatALL').addEventListener('change', function() {
+        var checkboxes = document.querySelectorAll('input[name="formats"]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            if (checkboxes[i].value !== 'ALL') {
+                checkboxes[i].checked = false;
+                checkboxes[i].disabled = this.checked;
+            }
+        }
+    });
 </script>
 </body>
 </html>

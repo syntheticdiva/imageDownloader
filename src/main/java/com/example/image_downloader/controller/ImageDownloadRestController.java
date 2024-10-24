@@ -1,5 +1,6 @@
 package com.example.image_downloader.controller;
 
+import com.example.image_downloader.enums.ImageFormat;
 import com.example.image_downloader.model.DownloadResult;
 import com.example.image_downloader.model.DownloadTask;
 import com.example.image_downloader.service.ImageDownloadService;
@@ -7,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/api")
@@ -23,19 +26,23 @@ public class ImageDownloadRestController {
     @PostMapping("/download")
     public ResponseEntity<DownloadResult> downloadImages(
             @RequestParam String url,
-            @RequestParam String savePath) {
+            @RequestParam String savePath,
+            @RequestParam(defaultValue = "ALL") ImageFormat format) {
 
-        DownloadResult result = downloadService.downloadImages(url, savePath);
+        DownloadResult result = downloadService.downloadImages(url, savePath, Collections.singletonList(format));
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/download/task")
     public ResponseEntity<DownloadTask> createDownloadTask(
             @RequestParam String url,
-            @RequestParam String savePath) {
+            @RequestParam String savePath,
+            @RequestParam(defaultValue = "ALL") ImageFormat format) {
         DownloadTask task = downloadService.createDownloadTask(url, savePath);
+        task.setFormat(format);  // Предполагается, что вы добавите поле format в DownloadTask
         return ResponseEntity.ok(task);
     }
+
 
     @GetMapping("/download/task/{taskId}")
     public ResponseEntity<DownloadTask> getDownloadTask(@PathVariable String taskId) {
@@ -48,8 +55,10 @@ public class ImageDownloadRestController {
     }
 
     @PostMapping("/download/task/{taskId}/start")
-    public ResponseEntity<DownloadTask> startDownload(@PathVariable String taskId) {
-        downloadService.startDownload(taskId);
+    public ResponseEntity<DownloadTask> startDownload(
+            @PathVariable String taskId,
+            @RequestParam(defaultValue = "ALL") ImageFormat format) {
+        downloadService.startDownload(taskId, Collections.singletonList(format));
         DownloadTask task = downloadService.getDownloadTask(taskId);
         return ResponseEntity.ok(task);
     }

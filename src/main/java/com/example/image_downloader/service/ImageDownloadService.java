@@ -1,6 +1,7 @@
 package com.example.image_downloader.service;
 
 import com.example.image_downloader.enums.DownloadStatus;
+import com.example.image_downloader.enums.ImageFormat;
 import com.example.image_downloader.model.DownloadResult;
 import com.example.image_downloader.model.DownloadTask;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +25,8 @@ import java.util.*;
 public class ImageDownloadService {
     private final Map<String, DownloadTask> tasks = new HashMap<>();
 
-
-    public DownloadResult downloadImages(String url, String savePath) {
+    public DownloadResult downloadImages(String url, String savePath, List<ImageFormat> formats) {
+        log.info("Downloading images with formats: {}", formats);
         List<String> errors = new ArrayList<>();
         int downloadedCount = 0;
 
@@ -64,30 +65,35 @@ public class ImageDownloadService {
                 String imgUrl = img.attr("abs:src");
                 if (imgUrl.isEmpty()) continue;
 
+                String fileExtension = getFileExtension(imgUrl);
+                log.debug("Processing image: {} with extension: {}", imgUrl, fileExtension);
+
+                boolean isValidFormat = formats.contains(ImageFormat.ALL) ||
+                        formats.stream().anyMatch(format ->
+                                ImageFormat.isValidExtension(fileExtension, format));
+
+                if (!isValidFormat) {
+                    log.debug("Skipping image due to format mismatch: {}", imgUrl);
+                    continue;
+                }
+
                 try {
                     String fileName = getUniqueFileName(savePath, imgUrl);
                     downloadImage(imgUrl, savePath + File.separator + fileName);
                     downloadedCount++;
+                    log.debug("Successfully downloaded: {}", fileName);
                 } catch (IOException e) {
+                    log.error("Failed to download image: {}", imgUrl, e);
                     errors.add("Не удалось скачать изображение: " + imgUrl + " - " + e.getMessage());
                 }
             }
 
-            String resultMessage;
-            boolean success;
+            // Формирование результата
+            String message = downloadedCount > 0
+                    ? "Успешно скачано " + downloadedCount + " изображений."
+                    : "Не удалось скачать ни одного изображения. Не найден выбранный формат";
 
-            if (downloadedCount > 0) {
-                resultMessage = "Успешно скачано " + downloadedCount + " изображений";
-                success = true;
-            } else if (!errors.isEmpty()) {
-                resultMessage = "Не удалось скачать ни одного изображения";
-                success = false;
-            } else {
-                resultMessage = "Изображения не найдены";
-                success = true;  // считаем успехом, если изображений просто нет
-            }
-
-            return new DownloadResult(success, resultMessage, downloadedCount, errors);
+            return new DownloadResult(errors.isEmpty(), message, downloadedCount, errors);
 
         } catch (Exception e) {
             log.error("Unexpected error", e);
@@ -96,6 +102,15 @@ public class ImageDownloadService {
                     downloadedCount,
                     Collections.singletonList("Внутренняя ошибка: " + e.getMessage()));
         }
+    }
+    private String getFileExtension(String url) {
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+        int queryStart = fileName.indexOf('?');
+        if (queryStart > 0) {
+            fileName = fileName.substring(0, queryStart);
+        }
+        int dotIndex = fileName.lastIndexOf('.');
+        return (dotIndex > 0) ? fileName.substring(dotIndex).toLowerCase() : "";
     }
     private String getUniqueFileName(String savePath, String imageUrl) {
         String originalFileName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
@@ -140,12 +155,12 @@ public class ImageDownloadService {
     public DownloadTask getDownloadTask(String taskId) {
         return tasks.get(taskId);
     }
-    public void startDownload(String taskId) {
+    public void startDownload(String taskId, List<ImageFormat> formats) {
         DownloadTask task = tasks.get(taskId);
         if (task != null && task.getStatus() == DownloadStatus.PENDING) {
             task.setStatus(DownloadStatus.IN_PROGRESS);
             try {
-                DownloadResult result = downloadImages(task.getUrl(), task.getSavePath());
+                DownloadResult result = downloadImages(task.getUrl(), task.getSavePath(), formats);
                 task.setResult(result);
                 task.setStatus(result.isSuccess() ? DownloadStatus.COMPLETED : DownloadStatus.FAILED);
             } catch (Exception e) {
