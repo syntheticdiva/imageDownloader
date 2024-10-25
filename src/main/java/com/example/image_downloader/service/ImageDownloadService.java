@@ -26,80 +26,72 @@ public class ImageDownloadService {
     private final Map<String, DownloadTask> tasks = new HashMap<>();
 
     public DownloadResult downloadImages(String url, String savePath, List<ImageFormat> formats) {
-        log.info("Downloading images with formats: {}", formats);
+        log.info("Начало скачивания изображений с URL: {} в путь: {} с форматами: {}", url, savePath, formats);
         List<String> errors = new ArrayList<>();
         int downloadedCount = 0;
 
+        // Проверка пути сохранения
+        File saveDirectory = new File(savePath);
+        if (!saveDirectory.isAbsolute() || !saveDirectory.exists() || !saveDirectory.isDirectory()) {
+            String errorMessage = "Указан некорректный путь для сохранения: " + savePath;
+            log.error(errorMessage);
+            return new DownloadResult(false, errorMessage, 0,
+                    Collections.singletonList("Укажите существующий абсолютный путь к директории"));
+        }
+
+        log.info("Путь для сохранения подтвержден: {}", savePath);
+
         try {
-            // Проверяем директорию
-            File directory = new File(savePath);
-            if (!directory.exists()) {
-                if (!directory.mkdirs()) {
-                    return new DownloadResult(false,
-                            "Не удалось создать директорию для сохранения", 0,
-                            Collections.singletonList("Проверьте права доступа к указанной директории"));
-                }
-            }
-
-            if (!directory.canWrite()) {
-                return new DownloadResult(false,
-                        "Нет прав на запись в указанную директорию", 0,
-                        Collections.singletonList("Выберите другую директорию или измените права доступа"));
-            }
-
-            // Загружаем и парсим страницу
-            Document doc;
-            try {
-                doc = Jsoup.connect(url).get();
-            } catch (IOException e) {
-                return new DownloadResult(false,
-                        "Не удалось загрузить страницу",
-                        0,
-                        Collections.singletonList("Проверьте подключение к интернету и корректность URL"));
-            }
-
-            // Получаем все изображения
+            Document doc = Jsoup.connect(url).get();
             Elements images = doc.select("img[src]");
+            log.info("Найдено {} изображений на странице", images.size());
 
             for (Element img : images) {
                 String imgUrl = img.attr("abs:src");
-                if (imgUrl.isEmpty()) continue;
+                if (imgUrl.isEmpty()) {
+                    log.debug("Пропуск пустого URL изображения");
+                    continue;
+                }
 
                 String fileExtension = getFileExtension(imgUrl);
-                log.debug("Processing image: {} with extension: {}", imgUrl, fileExtension);
+                log.debug("Обработка изображения: {} с расширением: {}", imgUrl, fileExtension);
 
                 boolean isValidFormat = formats.contains(ImageFormat.ALL) ||
                         formats.stream().anyMatch(format ->
                                 ImageFormat.isValidExtension(fileExtension, format));
 
                 if (!isValidFormat) {
-                    log.debug("Skipping image due to format mismatch: {}", imgUrl);
+                    log.debug("Пропуск изображения из-за несоответствия формата: {}", imgUrl);
                     continue;
                 }
 
                 try {
                     String fileName = getUniqueFileName(savePath, imgUrl);
-                    downloadImage(imgUrl, savePath + File.separator + fileName);
+                    String fullPath = savePath + File.separator + fileName;
+
+                    downloadImage(imgUrl, fullPath);
                     downloadedCount++;
-                    log.debug("Successfully downloaded: {}", fileName);
+                    log.info("Успешно скачано: {} в {}", imgUrl, fullPath);
                 } catch (IOException e) {
-                    log.error("Failed to download image: {}", imgUrl, e);
-                    errors.add("Не удалось скачать изображение: " + imgUrl + " - " + e.getMessage());
+                    log.error("Не удалось скачать или сохранить изображение: {}", imgUrl, e);
+                    errors.add("Не удалось скачать или сохранить изображение: " + imgUrl + " - " + e.getMessage());
                 }
             }
 
-            // Формирование результата
             String message = downloadedCount > 0
-                    ? "Успешно скачано " + downloadedCount + " изображений."
-                    : "Не удалось скачать ни одного изображения. Не найден выбранный формат";
+                    ? "Успешно скачано " + downloadedCount + " изображений в " + savePath
+                    : "Не удалось скачать ни одного изображения. Возможно, не найден выбранный формат или проблема с доступом к директории.";
+            log.info(message);
 
             return new DownloadResult(errors.isEmpty(), message, downloadedCount, errors);
 
+        } catch (IOException e) {
+            log.error("Не удалось загрузить страницу: {}", url, e);
+            return new DownloadResult(false, "Не удалось загрузить страницу", 0,
+                    Collections.singletonList("Проверьте подключение к интернету и корректность URL"));
         } catch (Exception e) {
-            log.error("Unexpected error", e);
-            return new DownloadResult(false,
-                    "Произошла непредвиденная ошибка",
-                    downloadedCount,
+            log.error("Непредвиденная ошибка во время процесса скачивания", e);
+            return new DownloadResult(false, "Произошла непредвиденная ошибка", downloadedCount,
                     Collections.singletonList("Внутренняя ошибка: " + e.getMessage()));
         }
     }
@@ -112,6 +104,7 @@ public class ImageDownloadService {
         int dotIndex = fileName.lastIndexOf('.');
         return (dotIndex > 0) ? fileName.substring(dotIndex).toLowerCase() : "";
     }
+
     private String getUniqueFileName(String savePath, String imageUrl) {
         String originalFileName = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
         if (originalFileName.contains("?")) {
@@ -122,20 +115,11 @@ public class ImageDownloadService {
             originalFileName = "image.jpg";
         }
 
-        String baseName;
-        String extension;
-        int lastDotIndex = originalFileName.lastIndexOf('.');
-        if (lastDotIndex > 0 && lastDotIndex < originalFileName.length() - 1) {
-            baseName = originalFileName.substring(0, lastDotIndex);
-            extension = originalFileName.substring(lastDotIndex);
-        } else {
-            baseName = "image";
-            extension = ".jpg";
-        }
+        String baseName = originalFileName.substring(0, originalFileName.lastIndexOf('.'));
+        String extension = originalFileName.substring(originalFileName.lastIndexOf('.'));
 
         File file = new File(savePath, originalFileName);
         int counter = 1;
-
         while (file.exists()) {
             String newFileName = baseName + "_" + counter + extension;
             file = new File(savePath, newFileName);
@@ -144,7 +128,6 @@ public class ImageDownloadService {
 
         return file.getName();
     }
-
     public DownloadTask createDownloadTask(String url, String savePath) {
         String taskId = UUID.randomUUID().toString();
         DownloadTask task = new DownloadTask(taskId, url, savePath);
@@ -155,6 +138,7 @@ public class ImageDownloadService {
     public DownloadTask getDownloadTask(String taskId) {
         return tasks.get(taskId);
     }
+
     public void startDownload(String taskId, List<ImageFormat> formats) {
         DownloadTask task = tasks.get(taskId);
         if (task != null && task.getStatus() == DownloadStatus.PENDING) {
@@ -164,7 +148,7 @@ public class ImageDownloadService {
                 task.setResult(result);
                 task.setStatus(result.isSuccess() ? DownloadStatus.COMPLETED : DownloadStatus.FAILED);
             } catch (Exception e) {
-                log.error("Error during download task execution", e);
+                log.error("Ошибка при выполнении задачи скачивания", e);
                 task.setStatus(DownloadStatus.FAILED);
                 task.setResult(new DownloadResult(false, "Ошибка при выполнении задачи: " + e.getMessage(), 0, Collections.singletonList(e.getMessage())));
             }
@@ -189,7 +173,6 @@ public class ImageDownloadService {
                 out.write(buffer, 0, bytesRead);
             }
         }
+        log.info("Изображение успешно скачано и сохранено в: {}", destinationPath);
     }
-
-
 }

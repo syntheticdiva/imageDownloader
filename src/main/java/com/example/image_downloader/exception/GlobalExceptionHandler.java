@@ -9,7 +9,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -18,13 +20,6 @@ import java.util.Collections;
 @ControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
-
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Object handleException(Exception e, Model model) {
-        log.error("Unexpected error occurred", e);
-        return createErrorResponse("Произошла непредвиденная ошибка", e.getMessage(), model);
-    }
 
     @ExceptionHandler(IOException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -57,7 +52,7 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Object handleMissingParams(MissingServletRequestParameterException e, Model model) {
+    public Object  handleMissingParams(MissingServletRequestParameterException e, Model model) {
         log.error("Missing required parameter", e);
         return createErrorResponse("Отсутствует обязательный параметр: " + e.getParameterName(), e.getMessage(), model);
     }
@@ -76,6 +71,21 @@ public class GlobalExceptionHandler {
             return errorMessage.substring(start + 1, end);
         }
         return "неизвестный URL";
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Object handleNoHandlerFoundException(NoHandlerFoundException ex, Model model) {
+        log.error("Requested page not found", ex);
+        String errorMessage = "Запрашиваемая страница не найдена. Пожалуйста, проверьте правильность URL.";
+        return createErrorResponse(errorMessage, ex.getMessage(), model);
+    }
+    @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Object handleAllUncaughtException(Exception ex, Model model) {
+        log.error("Unknown error occurred", ex);
+        String errorMessage = "Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже или обратитесь в поддержку.";
+        return createErrorResponse(errorMessage, ex.getMessage(), model);
     }
 
     private Object createErrorResponse(String userMessage, String technicalMessage, Model model) {
