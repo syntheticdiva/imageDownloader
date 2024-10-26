@@ -8,21 +8,14 @@ public enum ImageFormat {
     JPG, JPEG, PNG, GIF, BMP, ALL;
 
     public static List<String> getExtensions(ImageFormat format) {
-        switch (format) {
-            case ALL:
-                return Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".bmp");
-            case JPG:
-            case JPEG:
-                return Arrays.asList(".jpg", ".jpeg");
-            case PNG:
-                return Collections.singletonList(".png");
-            case GIF:
-                return Collections.singletonList(".gif");
-            case BMP:
-                return Collections.singletonList(".bmp");
-            default:
-                throw new IllegalArgumentException("Unsupported image format: " + format);
-        }
+        return switch (format) {
+            case ALL -> Arrays.asList(".jpg", ".jpeg", ".png", ".gif", ".bmp");
+            case JPG, JPEG -> Arrays.asList(".jpg", ".jpeg");
+            case PNG -> Collections.singletonList(".png");
+            case GIF -> Collections.singletonList(".gif");
+            case BMP -> Collections.singletonList(".bmp");
+            default -> throw new IllegalArgumentException("Unsupported image format: " + format);
+        };
     }
 
     public static boolean isValidExtension(String extension, ImageFormat format) {

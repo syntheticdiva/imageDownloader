@@ -2,7 +2,7 @@ package com.example.image_downloader.controller;
 
 import com.example.image_downloader.enums.ImageFormat;
 import com.example.image_downloader.model.DownloadResult;
-import com.example.image_downloader.service.ImageDownloadService;
+import com.example.image_downloader.service.impl.ImageDownloadServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -19,10 +19,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ImageDownloadWebController {
 
-    private final ImageDownloadService downloadService;
+    private final ImageDownloadServiceImpl downloadService;
 
     @Autowired
-    public ImageDownloadWebController(ImageDownloadService downloadService) {
+    public ImageDownloadWebController(ImageDownloadServiceImpl downloadService) {
         this.downloadService = downloadService;
     }
 
