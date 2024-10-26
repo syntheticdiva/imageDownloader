@@ -88,16 +88,9 @@ public class GlobalExceptionHandler {
         return createErrorResponse(errorMessage, ex.getMessage(), model);
     }
 
-    private Object createErrorResponse(String userMessage, String technicalMessage, Model model) {
+    private String createErrorResponse(String userMessage, String technicalMessage, Model model) {
         DownloadResult errorResult = new DownloadResult(false, userMessage, 0, Collections.singletonList(technicalMessage));
-
-        if (model != null) {
-            // Для веб-контроллера
-            model.addAttribute("result", errorResult);
-            return "error";  // Изменено с "download" на "error"
-        } else {
-            // Для REST контроллера
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResult);
-        }
+        model.addAttribute("result", errorResult);
+        return "error";
     }
 }
